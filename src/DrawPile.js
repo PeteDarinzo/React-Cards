@@ -15,7 +15,7 @@ const DrawPile = () => {
   const [draw, setDraw] = useState(false);
 
   const timerId = useRef();
-  // prevent second useEffect from executing until the draw button is clicked
+  // prevent drawing upon mount
   const isMounted = useRef(false);
 
   const toggleDraw = () => {
@@ -62,6 +62,7 @@ const DrawPile = () => {
       if (pile.length < 51) {
         setPile(pile => [...pile, card])
       } else {
+        // if all cards drawn, stop timer
         clearInterval(timerId.current);
       }
     } else {
@@ -71,7 +72,8 @@ const DrawPile = () => {
 
   return (
     <div >
-      {(pile.length < 52) && (draw ? <button className="DrawPile-button" onClick={toggleDraw}>Stop Drawing</button> : <button className="DrawPile-button" onClick={toggleDraw}>Start Drawing</button>)}
+      {(pile.length < 52) &&
+        (draw ? <button className="DrawPile-button" onClick={toggleDraw}>Stop Drawing</button> : <button className="DrawPile-button" onClick={toggleDraw}>Start Drawing</button>)}
       {(pile.length === 52) && <p className="DrawPile-empty">NO CARDS REMAINING!</p>}
       <div className="DrawPile">
         {pile}
