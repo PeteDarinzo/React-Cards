@@ -13,23 +13,47 @@ const DrawPile = () => {
   const [card, setCard] = useState(null);
   const [pile, setPile] = useState([]);
   const [draw, setDraw] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
 
   const timerId = useRef();
-  // prevent drawing upon mount
+  // use isMounted to prevent adding the null card to the pile upon mount
   const isMounted = useRef(false);
+  const pileSize = useRef(0);
 
   const toggleDraw = () => {
     setDraw(!draw);
   }
 
-  // shuffle deck and get id once on mount
+  /**
+   * if shuffle button is pressed
+   * toggle shuffle in state, to shuffle the deck
+   * reset the pile, and reset draw in state
+   */
+  const toggleShuffle = () => {
+    setShuffle(!shuffle); // toggle shuffle to invoke useEffect
+    setPile([]);
+    setDraw(false);
+    pileSize.current = 0;
+  }
+
+  /**
+   * shuffle the deck
+   * if upon mount, create a new shuffled deck
+   * if shuffling existing deck, use the deck id to shuffle
+   */
   useEffect(() => {
     async function shuffleDeck() {
-      const res = await axios.get(`${cardsUrl}/api/deck/new/shuffle/?deck_count=1`);
-      deckId = res.data.deck_id;
+      // if a deck has already been created, simply shuffle instead of creating a new one
+      // if no deck, create a new shuffled one, and record its id
+      if (deckId) {
+        const res = await axios.get(`http://deckofcardsapi.com/api/deck/${deckId}/shuffle/`)
+      } else {
+        const res = await axios.get(`${cardsUrl}/api/deck/new/shuffle/?deck_count=1`);
+        deckId = res.data.deck_id;
+      }
     }
     shuffleDeck();
-  }, []);
+  }, [shuffle]);
 
   /**
    * Request a card from the API
@@ -42,29 +66,29 @@ const DrawPile = () => {
     setCard(() => <Card image={image} key={code} />);
   }
 
+  /**
+   * if draw is true and the number of drawn cards is below 52, draw a card
+   * once 52 cards have been drawn, stop the timer
+   * if the stop draw button is clicked, stop the timer
+   */
   useEffect(() => {
     if (draw) {
       timerId.current = setInterval(() => {
-        drawCard();
-      }, 1000);
+        pileSize.current < 52 ? drawCard() : clearInterval(timerId.current);
+      }, 250);
     } else {
       clearInterval(timerId.current);
     }
   }, [draw]);
 
   /**
-   * Upon each new card drawn
-   * Update the pile in state with the current card
+   * Upon each new card drawn update the pile in state with the current card
    */
   useEffect(() => {
-    // use isMounted ref to avoid adding a card upon mount
+    // use isMounted ref to avoid adding the null card to the pile upon mount
     if (isMounted.current) {
-      if (pile.length < 51) {
-        setPile(pile => [...pile, card])
-      } else {
-        // if all cards drawn, stop timer
-        clearInterval(timerId.current);
-      }
+      setPile(pile => [...pile, card])
+      pileSize.current++;
     } else {
       isMounted.current = true;
     }
@@ -75,6 +99,7 @@ const DrawPile = () => {
       {(pile.length < 52) &&
         (draw ? <button className="DrawPile-button" onClick={toggleDraw}>Stop Drawing</button> : <button className="DrawPile-button" onClick={toggleDraw}>Start Drawing</button>)}
       {(pile.length === 52) && <p className="DrawPile-empty">NO CARDS REMAINING!</p>}
+      <button onClick={toggleShuffle}>Shuffle</button>
       <div className="DrawPile">
         {pile}
       </div>
