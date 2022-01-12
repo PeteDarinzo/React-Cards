@@ -75,7 +75,7 @@ const DrawPile = () => {
     if (draw) {
       timerId.current = setInterval(() => {
         pileSize.current < 52 ? drawCard() : clearInterval(timerId.current);
-      }, 250);
+      }, 500);
     } else {
       clearInterval(timerId.current);
     }
@@ -97,7 +97,7 @@ const DrawPile = () => {
   return (
     <div >
       {(pile.length < 52) &&
-        (draw ? <button className="DrawPile-button" onClick={toggleDraw}>Stop Drawing</button> : <button className="DrawPile-button" onClick={toggleDraw}>Start Drawing</button>)}
+        (<button className="DrawPile-button" onClick={toggleDraw}>{draw ? "Stop Drawing" : "Start Drawing"}</button>)}
       {(pile.length === 52) && <p className="DrawPile-empty">NO CARDS REMAINING!</p>}
       <button onClick={toggleShuffle}>Shuffle</button>
       <div className="DrawPile">
