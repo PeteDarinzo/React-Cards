@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Card from "./Card.js";
 import axios from "axios";
 import "./DrawPile.css";
-
+import { getRandomAngle, getRandomTranslation } from "./helpers.js";
+import { clear } from "@testing-library/user-event/dist/clear";
 
 const cardsUrl = "http://deckofcardsapi.com";
 let deckId = "";
@@ -18,7 +19,6 @@ const DrawPile = () => {
   const timerId = useRef();
   // use isMounted to prevent adding the null card to the pile upon mount
   const isMounted = useRef(false);
-  const pileSize = useRef(0);
 
   const toggleDraw = () => {
     setDraw(!draw);
@@ -33,7 +33,6 @@ const DrawPile = () => {
     setShuffle(!shuffle); // toggle shuffle to invoke useEffect
     setPile([]);
     setDraw(false);
-    pileSize.current = 0;
   }
 
   /**
@@ -57,13 +56,23 @@ const DrawPile = () => {
 
   /**
    * Request a card from the API
-   * set as current card in state
+   * Set card data, along with random angle and x-y translation in state
    */
   async function drawCard() {
+
+    // console.log(pile.length); // always 0
+
     const res = await axios.get(`${cardsUrl}/api/deck/${deckId}/draw/?count=1`);
     const code = res.data.cards[0].code;
     const image = res.data.cards[0].image;
-    setCard(() => <Card image={image} key={code} />);
+    const angle = getRandomAngle();
+    const x = getRandomTranslation();
+    const y = getRandomTranslation();
+    setCard(card => ({ image, code, angle, x, y }));
+
+    if (res.data.remaining === 0) {
+      clearInterval(timerId.current);
+    }
   }
 
   /**
@@ -74,21 +83,24 @@ const DrawPile = () => {
   useEffect(() => {
     if (draw) {
       timerId.current = setInterval(() => {
-        pileSize.current < 52 ? drawCard() : clearInterval(timerId.current);
-      }, 500);
+        drawCard();
+      }, 1000);
     } else {
       clearInterval(timerId.current);
     }
+
+    // stop timer when page is navigated away from
+    return () => clearInterval(timerId.current); 
+
   }, [draw]);
 
   /**
-   * Upon each new card drawn update the pile in state with the current card
+   * Upon each new card drawn update the pile in state with the current card data
    */
   useEffect(() => {
     // use isMounted ref to avoid adding the null card to the pile upon mount
     if (isMounted.current) {
       setPile(pile => [...pile, card])
-      pileSize.current++;
     } else {
       isMounted.current = true;
     }
@@ -101,7 +113,7 @@ const DrawPile = () => {
       {(pile.length === 52) && <p className="DrawPile-empty">NO CARDS REMAINING!</p>}
       <button onClick={toggleShuffle}>Shuffle</button>
       <div className="DrawPile">
-        {pile}
+        {pile.map(({ image, code, angle, x, y }) => <Card image={image} key={code} angle={angle} x={x} y={y} />)}
       </div>
     </div>
   );
